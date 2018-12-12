@@ -1,0 +1,5 @@
+{:application "expath-ml-console"
+ :content-database "emlc"
+ :appservers [{:name "emlc"
+               :port 7777
+               :properties {:url-rewriter "/plumbing/rewriter.xml"}}]}
