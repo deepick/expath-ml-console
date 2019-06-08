@@ -1,10 +1,6 @@
-/* General rules.
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * General rules.
  */
-
-/* for file-upload */
-.fade.in {
-  opacity: 1
-}
 
 h3 {
   margin-top: 35px;
@@ -19,15 +15,177 @@ main {
   padding-top: 70px;
 }
 
+table {
+  font-size: 13px;
+  font-family: "Lucida Grande", Verdana, Arial, Helvetica, sans-serif;
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+a:active {
+  text-decoration: none;
+}
+
+/* for file-upload */
+.fade.in {
+  opacity: 1
+}
+
+/* forms */
 .col-form-label {
   font-weight: bold;
   text-align: right;
 }
 
-table {
+/* loading spinner */
+.loading {
+  background: url('/images/loading.gif') no-repeat center;
+  height: 100pt;
+  background-size: 64px 64px;
+}
+
+/* typeahead */
+.twitter-typeahead .loading {
+  background: url('/images/loading.gif') no-repeat right center;
+  background-size: 30px 30px;
+}
+
+/* DataTables rules */
+
+/* FIXME: This is missing when importing DataTables CSS with Bootstrap support. */
+/* See https://datatables.net/forums/discussion/31440/. */
+table.dataTable tbody th.dt-body-right,
+table.dataTable tbody td.dt-body-right {
+  text-align: right;
+}
+
+td.cell-code {
+  font-size: 80%;
+}
+
+/* seems to be used only in legacy page job/original.xq, so to remove as well */
+#tasks-count {
+  font-weight: bold;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Profiler-specific.
+ */
+
+#total-time {
+  font-weight: bold;
+}
+
+.frame {
+  /* font-family: "Source Code Pro", Consolas, Menlo, Monaco, "Courier New", monospace; */
+  padding: 5px;
+  margin-bottom: 15px;
+  /* font-size: 0.8em; */
+  color: #444;
+  background-color: #fcfcfc;
+  border: 1px solid #e0e0e0;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Footpane-specific.
+ */
+
+/* "height" is set in JS */
+#footpane {
+    position: fixed;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    margin-bottom: 0px;
+    z-index: 10;
+    background-color: white;
+}
+
+/* "cursor" is set in JS (to "pointer" or "ns-resize") */
+#footline {
+    text-align: right;
+    font-size: 75%;
+    color: rgba(255,255,255,.7);
+    font-weight: bold;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-right: .5em;
+    background-color: #707579;
+}
+
+#footline span {
+    margin-right: .5em;
+}
+
+/* "top" is set in JS (to the "height" of "#footline") */
+#footbody {
+    position: absolute;
+    bottom: 0px;
+    left: 0px;
+    overflow: auto;
+    padding-left: 25px;
+    padding-right: 25px;
+    width: 100%
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Trible and triph-specific.
+ */
+
+.triph {
+  display: none;
+  border: 0.8px solid #dee2e6;
+  border-radius: 10px;
+}
+
+.triph-tooltip {
+  display: none;
+  position: absolute;
+  margin: 10pt;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  background: #f5f6f7;
+  border: 0.8px solid #dee2e6;
+  border-radius: 5px;
+  color: #585a5c;
   font-size: 13px;
   font-family: "Lucida Grande", Verdana, Arial, Helvetica, sans-serif;
 }
+
+.triph-tooltip p {
+  margin-bottom: 0;
+  padding-left: 6px;
+  padding-right: 5px;
+}
+
+.triph-tooltip ul {
+  margin-bottom: 0;
+  padding-left: 25px;
+  padding-right: 5px;
+}
+
+.triph-tooltip hr {
+  margin-top: 5px;
+  margin-bottom: 3px;
+}
+
+.triph-tooltip span {
+  margin-left: 3px;
+  margin-right___: 5px;
+}
+
+.triph-tooltip a {
+  padding-right: 7px;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Code pills (and blocks).
+ */
 
 pre {
   font-family: "Source Code Pro", Consolas, Menlo, Monaco, "Courier New", monospace;
@@ -39,6 +197,15 @@ pre {
   -webkit-border-radius: 3px;
   -moz-border-radius: 3px;
   border-radius: 3px;
+  position: relative;
+}
+
+pre > span {
+  position: absolute;
+  top: 1px;
+  right: 4px;
+  font-size: 75%;
+  color: #8C9093;
 }
 
  a code ,
@@ -64,19 +231,6 @@ li code::after {
   margin-left: 4px;
   padding-left: 4px;
   opacity: 0.5;
-}
-
-a:hover {
-  text-decoration: none;
-}
-
-a:active {
-  text-decoration: none;
-}
-
-.loading {
-  background: url('/images/loading.gif') no-repeat right center;
-  background-size: 30px 30px;
 }
 
 /* red */
@@ -247,41 +401,3 @@ code.proj::after {
    background-color: #f2f7f9;
    border: 1px solid #b8c3c5;
  */
-
-#total-time {
-  font-weight: bold;
-}
-
-#tasks-count {
-  font-weight: bold;
-}
-
-/* DataTables rules.
- */
-
-/* FIXME: This is missing when importing DataTables CSS with Bootstrap support. */
-/* See https://datatables.net/forums/discussion/31440/. */
-table.dataTable tbody th.dt-body-right,
-table.dataTable tbody td.dt-body-right {
-  text-align: right;
-}
-
-td.cell-code {
-  font-size: 80%;
-}
-
-/* Profiler-specific.
- */
-
-.frame {
-  /* font-family: "Source Code Pro", Consolas, Menlo, Monaco, "Courier New", monospace; */
-  padding: 5px;
-  margin-bottom: 15px;
-  /* font-size: 0.8em; */
-  color: #444;
-  background-color: #fcfcfc;
-  border: 1px solid #e0e0e0;
-  -webkit-border-radius: 3px;
-  -moz-border-radius: 3px;
-  border-radius: 3px;
-}

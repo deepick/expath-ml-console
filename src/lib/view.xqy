@@ -5,10 +5,10 @@ xquery version "3.0";
  :)
 module namespace v = "http://expath.org/ns/ml/console/view";
 
-import module namespace a    = "http://expath.org/ns/ml/console/admin"  at "admin.xqy";
-import module namespace b    = "http://expath.org/ns/ml/console/binary" at "binary.xqy";
-import module namespace t    = "http://expath.org/ns/ml/console/tools"  at "tools.xqy";
-import module namespace init = "http://expath.org/ns/ml/console/init"   at "../init/lib-init.xqy";
+import module namespace a       = "http://expath.org/ns/ml/console/admin"   at "admin.xqy";
+import module namespace b       = "http://expath.org/ns/ml/console/binary"  at "binary.xqy";
+import module namespace t       = "http://expath.org/ns/ml/console/tools"   at "tools.xqy";
+import module namespace triples = "http://expath.org/ns/ml/console/triples" at "triples.xqy";
 
 declare namespace c    = "http://expath.org/ns/ml/console";
 declare namespace h    = "http://www.w3.org/1999/xhtml";
@@ -33,13 +33,12 @@ declare variable $v:pages as element(c:pages) :=
       <!--c:page name="devel"    title="Devel's evil"                  label="Devel"/-->
    </c:pages>;
 
+(: TODO: Should be able to have CSS files as well in one single lib. :)
 declare variable $v:js-libs :=
    <c:libs>
-      <c:lib code="emlc.target">
-         <c:path>emlc/emlc-target.js</c:path>
-      </c:lib>
       <!-- TODO: For now, load everything, but should cherry-pick between sjs and xqy. -->
       <c:lib code="emlc.ace">
+         <c:path>emlc/emlc-ace.js</c:path>
          <c:path>emlc/emlc-ace-prefixes-sjs.js</c:path>
          <c:path>emlc/emlc-ace-prefixes-xqy.js</c:path>
          <c:path>emlc/emlc-ace-types-sjs.js</c:path>
@@ -47,9 +46,32 @@ declare variable $v:js-libs :=
          <c:path>emlc/emlc-ace-functions-sjs.js</c:path>
          <c:path>emlc/emlc-ace-functions-xqy.js</c:path>
       </c:lib>
-      <c:lib code="marked">
+      <c:lib code="emlc.browser">
+         <c:path>emlc/emlc-browser.js</c:path>
+      </c:lib>
+      <c:lib code="emlc.cxan">
+         <c:path>emlc/emlc-cxan.js</c:path>
+      </c:lib>
+      <c:lib code="emlc.footpane">
+         <c:path>emlc/emlc-footpane.js</c:path>
+      </c:lib>
+      <c:lib code="emlc.job">
+         <c:path>emlc/emlc-job.js</c:path>
+      </c:lib>
+      <c:lib code="emlc.markdown">
          <c:path>marked.min.js</c:path>
          <c:path>highlight/highlight.pack.js</c:path>
+         <c:path>emlc/emlc-markdown.js</c:path>
+      </c:lib>
+      <c:lib code="emlc.profiler">
+         <c:path>emlc/emlc-profiler.js</c:path>
+      </c:lib>
+      <c:lib code="emlc.target">
+         <c:path>emlc/emlc-target.js</c:path>
+      </c:lib>
+      <c:lib code="emlc.trible">
+         <c:path>d3.min.js</c:path>
+         <c:path>emlc/emlc-trible.js</c:path>
       </c:lib>
       <c:lib code="typeahead">
          <c:path>typeahead.bundle.js</c:path>
@@ -152,33 +174,11 @@ declare function v:console-page(
    $scripts as element()*
 ) as document-node()
 {
-   if ( init:is-init() ) then (
-      v:console-page-no-check($root, $page, $title, $content, $scripts)
-   )
-   else (
-      v:redirect($root || 'init'),
-      xdmp:set-response-content-type("text/plain"),
-      document {
-         'The Console is not initialized, you are being redirected'
-      }
-   )
-};
-
-declare function v:console-page-no-check(
-   $root    as xs:string,
-   $page    as xs:string,
-   $title   as xs:string,
-   $content as function() as element()+,
-   $scripts as element()*
-) as document-node()
-{
    xdmp:set-response-content-type("text/html"),
    document {
       '<!doctype html>&#10;' ||
       xdmp:quote(
-         let $cnt := v:eval-content($content)
-         return
-            v:console-page-static($root, $page, $title, $cnt, $scripts),
+         v:console-page-static($root, $page, $title, v:eval-content($content), $scripts),
          <options xmlns="xdmp:quote">
             <method>html</method>
             <media-type>text/html</media-type>
@@ -194,9 +194,9 @@ declare function v:console-page-no-check(
  : error, this function returns HTML elements describing the error instead, to
  : be displayed to the user.
  :
- : FIXME: In order to be sure the transaction is rolled back in case of failure,
- : do NOT use try/catch here.  Move the error handling to the error handler
- : module, set on the appserver.
+ : TODO: In case of error, return rather something like <c:error>...</c:error>,
+ : and detect it and treat it specially in `v:console-page-static()` (e.g. to
+ : import the ACE editor in order to display the XML nicely...)
  :)
 declare %private function v:eval-content(
    $content as function() as element()+
@@ -232,7 +232,7 @@ declare %private function v:console-page-static(
          <meta name="viewport" content="width=device-width, initial-scale=1"/>
          <meta name="ml.time"  content="{ xdmp:elapsed-time() }"/>
          <title>{ $title }</title>
-         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css"/>
+         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"/>
          {
             v:import-css($root || 'style/', (
                'bootstrap.min.css',
@@ -276,12 +276,12 @@ declare %private function v:console-page-static(
                   $content[@class = 'jumbotron']
                }
                </div>,
-               <div class="container">
+               <div class="container" id="main">
                   { $content[fn:not(@class = 'jumbotron')] }
                </div>
             )
             else (
-               <div class="container">
+               <div class="container" id="main">
                   <h1>{ $title }</h1>
                   { $content }
                </div>
@@ -318,7 +318,12 @@ declare %private function v:console-page-static(
             for $script in $scripts
             return
                if ( $script[self::*:script] ) then
-                  <script>{ $script/(@*, node()) }</script>
+                  <script> {
+                    $script/(@type, attribute type { 'text/javascript' })[1],
+                    $script/(@* except @type),
+                    $script/node()
+                  }
+                  </script>
                else if ( $script[self::*:lib/@src] ) then
                   v:import-javascript($root || 'js/', $script/@src)
                else if ( $script[self::*:lib] ) then
@@ -542,7 +547,7 @@ declare function v:edit-xml(
    $dir  as xs:string?,
    $root as xs:string?,
    $sep  as xs:string?,
-   $top  as xs:string
+   $top  as xs:string?
 ) as element()+
 {
    v:edit-node($elem, 'xml', 'xml', $id, $uri, $dir, $root, $sep, $top)
@@ -561,7 +566,7 @@ declare function v:edit-json(
    $dir  as xs:string?,
    $root as xs:string?,
    $sep  as xs:string?,
-   $top  as xs:string
+   $top  as xs:string?
 ) as element()+
 {
    v:edit-node($json, 'json', 'json', $id, $uri, $dir, $root, $sep, $top)
@@ -592,7 +597,7 @@ declare function v:edit-text(
    $elem as text(),
    $mode as xs:string,
    $id   as xs:string,
-   $top  as xs:string
+   $top  as xs:string?
 ) as element(h:pre)
 {
    v:ace-editor($elem, 'editor', $mode, $id, (), $top, '250pt')
@@ -612,7 +617,7 @@ declare function v:edit-text(
    $dir  as xs:string?,
    $root as xs:string?,
    $sep  as xs:string?,
-   $top  as xs:string
+   $top  as xs:string?
 ) as element()+
 {
    v:edit-node($text, $mode, 'text', $id, $uri, $dir, $root, $sep, $top)
@@ -633,7 +638,7 @@ declare function v:edit-node(
    $dir  as xs:string?,
    $root as xs:string?,
    $sep  as xs:string?,
-   $top  as xs:string
+   $top  as xs:string?
 ) as element()+
 {
    let $back-params := fn:string-join((
@@ -644,9 +649,9 @@ declare function v:edit-node(
    return (
       v:ace-editor($node, 'editor', $mode, $id, $uri, $top, '250pt'),
       <dummy xmlns="http://www.w3.org/1999/xhtml">
-         <button class="btn btn-outline-secondary" onclick='saveDoc("{ $id }", "{ $type }");'>Save</button>
+         <button class="btn btn-outline-secondary" onclick='emlc.saveDoc("{ $id }", "{ $type }");'>Save</button>
          <span>  </span>
-         <button class="btn btn-outline-danger float-right" onclick='deleteDoc("{ $id }");'>Delete</button>
+         <button class="btn btn-outline-danger float-right" onclick='emlc.deleteDoc("{ $id }");'>Delete</button>
          <p/>
          <div id="{ $id }-message" style="display: none" class="alert alert-dismissible fade" role="alert">
             <strong/> <span/>
@@ -720,7 +725,11 @@ declare function v:inject-attr(
 {
    let $a := $attrs[fn:node-name(.) eq xs:QName($name)]
    return (
-      attribute { $name } { fn:string-join(($values, $a), $sep) },
+      attribute { $name } {
+         fn:string-join(
+            ($values, $a ! xs:string(.)),
+            $sep)
+      },
       $attrs except $a
    )
 };
@@ -801,7 +810,8 @@ declare function v:one-liner-form(
 ) as element(h:form)
 {
    v:form($action, $attrs,
-      <div xmlns="http://www.w3.org/1999/xhtml" class="form-group row">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+         { v:inject-class(('form-group', 'row'), $content/@*) }
          { $content/label }
          <div class="col-sm-9">
             { $content/descendant-or-self::input }
@@ -908,6 +918,33 @@ declare function v:input-text-area($name as xs:string, $label as xs:string, $pla
    </div>
 };
 
+declare function v:input-password($id as xs:string, $label as xs:string, $placeholder as xs:string)
+   as element(h:div)
+{
+   v:input-password($id, $label, $placeholder, ())
+};
+
+declare function v:input-password(
+   $id          as xs:string,
+   $label       as xs:string,
+   $placeholder as xs:string,
+   $div-attrs   as attribute()*
+) as element(h:div)
+{
+   v:input-password($id, $label, $placeholder, $div-attrs, ())
+};
+
+declare function v:input-password(
+   $id          as xs:string,
+   $label       as xs:string,
+   $placeholder as xs:string,
+   $div-attrs   as attribute()*,
+   $input-attrs as attribute()*
+) as element(h:div)
+{
+   v:input-text($id, $label, $placeholder, $div-attrs, (), 'password')
+};
+
 declare function v:input-text($id as xs:string, $label as xs:string, $placeholder as xs:string)
    as element(h:div)
 {
@@ -932,11 +969,23 @@ declare function v:input-text(
    $input-attrs as attribute()*
 ) as element(h:div)
 {
+   v:input-text($id, $label, $placeholder, $div-attrs, $input-attrs, 'text')
+};
+
+declare function v:input-text(
+   $id          as xs:string,
+   $label       as xs:string,
+   $placeholder as xs:string,
+   $div-attrs   as attribute()*,
+   $input-attrs as attribute()*,
+   $type        as xs:string
+) as element(h:div)
+{
    <div xmlns="http://www.w3.org/1999/xhtml">
       { v:inject-class(('form-group', 'row'), $div-attrs) }
       <label for="{ $id }" class="col-sm-2 col-form-label">{ $label }</label>
       <div class="col-sm-10">
-         <input type="text" name="{ $id }" placeholder="{ $placeholder }"> {
+         <input type="{ $type }" name="{ $id }" placeholder="{ $placeholder }"> {
             v:inject-class('form-control', $input-attrs)
          }
          </input>
@@ -1173,7 +1222,7 @@ declare function v:input-db-widget($id as xs:string, $name as xs:string, $label 
    as element((: h:input|h:div :))+
 {
    let $buttons := (
-         <div class="btn-group">
+         <div xmlns="http://www.w3.org/1999/xhtml" class="btn-group">
             <button type="button" class="btn btn-outline-secondary dropdown-toggle"
                     data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                Databases
@@ -1193,10 +1242,10 @@ declare function v:input-db-widget($id as xs:string, $name as xs:string, $label 
                       <srv label="WebDAV" type="webDAV"/>)
          return (
             ' ',
-            <div class="btn-group" style="margin-left: 10px;">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="btn-group" style="margin-right: 10px;">
                <button type="button" class="btn btn-outline-secondary dropdown-toggle"
                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                  { xs:string($srv/@label) } servers
+                  { xs:string($srv/@label) }
                </button>
                <div class="dropdown-menu" style="min-width: 400pt"> {
                   let $asses := $all[@type eq $srv/@type]
@@ -1205,7 +1254,7 @@ declare function v:input-db-widget($id as xs:string, $name as xs:string, $label 
                         for $as in $asses
                         order by $as/a:name
                         return
-                           v:format-db-widget-as($as, $id, $srv/@label)
+                           v:format-db-widget-as($as, $srv/@label, $id)
                      else
                         <a class="dropdown-item" style="font-style: italic" href="#">(none)</a>
                }
@@ -1239,37 +1288,49 @@ declare function v:input-db-widget($id as xs:string, $name as xs:string, $label 
       )
 };
 
+declare function v:format-db-widget-db($db as element(a:database)) as element(h:a)
+{
+   v:format-db-widget-db($db, ())
+};
+
 declare function v:format-db-widget-db(
    $db    as element(a:database),
-   $field as xs:string
+   $field as xs:string?
 ) as element(h:a)
 {
    <a xmlns="http://www.w3.org/1999/xhtml"
       class="emlc-target-entry dropdown-item"
       href="#"
-      data-field="#{ $field }"
       data-id="{ $db/@id }"
       data-label="{ $db/a:name }"> {
+      $field ! attribute data-field { '#' || $field },
       $db/fn:string(a:name)
    }
    </a>
 };
 
 declare function v:format-db-widget-as(
-   $as    as element(a:appserver),
-   $field as xs:string,
-   $type  as xs:string
+   $as   as element(a:appserver),
+   $type as xs:string
 ) as element(h:a)
 {
-   let $name  := xs:string($as/a:name)
-   let $label := $name || ' (' || $type || ')'
+   v:format-db-widget-as($as, $type, ())
+};
+
+declare function v:format-db-widget-as(
+   $as    as element(a:appserver),
+   $type  as xs:string,
+   $field as xs:string?
+) as element(h:a)
+{
+   let $name := xs:string($as/a:name)
    return
       <a xmlns="http://www.w3.org/1999/xhtml"
          class="emlc-target-entry dropdown-item"
          href="#"
-         data-field="#{ $field }"
          data-id="{ $as/@id }"
-         data-label="{ $label }">
+         data-label="{ $name }">
+         { $field ! attribute data-field { '#' || $field } }
          <span> {
             $name
          }
@@ -1381,7 +1442,7 @@ declare function v:iri-link(
    $param    as xs:string
 )
 {
-   let $curie := v:shorten-resource($iri, $decls)
+   let $curie := triples:curie($iri, $decls)
    return
       if ( $curie ) then
          v:component-link($endpoint || '/' || $curie, $curie, $kind)
@@ -1415,78 +1476,4 @@ declare function v:component-link($href as xs:string, $name as xs:string, $kind 
    <a xmlns="http://www.w3.org/1999/xhtml" href="{ $href }">
       <code class="{ $kind }">{ $name }</code>
    </a>
-};
-
-(:~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- : Triple display tools
- :)
-
-(:~
- : Shorten a resource URI, if a prefix can be found for it.
- :
- : The first entry in `$decls` that matches $uri (that is, the first one for which
- : $uri starts with the text value of) is used.  If there is no such entry, return
- : the empty sequence.
- :)
-declare function v:shorten-resource($uri as xs:string, $decls as element(c:decl)*)
-   as xs:string?
-{
-   v:find-prefix-by-uri($uri, $decls)
-      ! ( c:prefix || ':' || fn:substring-after($uri, c:uri) )
-};
-
-(:~
- : Expand a CURIE notation to the full URI.
- :
- : The first entry in `$decls` that matches the prefix of the CURIE is used.  If
- : there is no such entry, the function returns the original one.
- :)
-declare function v:expand-curie($curie as xs:string, $decls as element(c:decl)*)
-   as xs:string
-{
-   let $prefix := fn:substring-before($curie, ':')
-   let $decl   := $prefix[.] ! v:find-prefix-by-prefix(., $decls)
-   return
-      if ( fn:empty($decl) ) then
-         $curie
-      else
-         $decl/c:uri || fn:substring-after($curie, ':')
-};
-
-(:~
- : Return the first matching prefix declaration, for a complete resource URI.
- :)
-declare function v:find-prefix-by-uri($uri as xs:string, $decls as element(c:decl)*)
-   as element(c:decl)?
-{
-   v:find-matching-prefix($decls, function($decl) {
-      fn:starts-with($uri, $decl/c:uri)
-   })
-};
-
-(:~
- : Return the first matching prefix declaration, for a given prefix.
- :)
-declare function v:find-prefix-by-prefix($prefix as xs:string, $decls as element(c:decl)*)
-   as element(c:decl)?
-{
-   v:find-matching-prefix($decls, function($decl) {
-      $decl/c:prefix eq $prefix
-   })
-};
-
-(:~
- : Return the first matching prefix declaration, for a given predicate.
- :)
-declare function v:find-matching-prefix(
-   $decls as element(c:decl)*,
-   $pred  as function(element(c:decl)) as xs:boolean
-) as element(c:decl)?
-{
-   if ( fn:empty($decls) ) then
-      ()
-   else if ( $pred($decls[1]) ) then
-      $decls[1]
-   else
-      v:find-matching-prefix(fn:remove($decls, 1), $pred)
 };

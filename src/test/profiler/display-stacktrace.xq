@@ -9,7 +9,9 @@ import module namespace v = "http://expath.org/ns/ml/console/view"  at "../../li
 
 declare default element namespace "http://www.w3.org/1999/xhtml";
 
-declare variable $script :=
+declare variable $scripts := (
+   <lib>emlc.ace</lib>,
+   <lib>emlc.profiler</lib>,
    <script type="text/javascript">
       $(document).ready(function () {{
          $.ajax({{
@@ -18,14 +20,15 @@ declare variable $script :=
             dataType: 'json',
             success: function(data) {{
                var pretty = JSON.stringify(data, null, 3);
-               editorSetContent('raw-json', pretty);
-               displayStackTrace(data, $('#stacktrace'));
+               emlc.editorSetContent('raw-json', pretty);
+               emlc.displayStackTrace(data, $('#stacktrace'));
             }},
             error: function(xhr, status, error) {{
                alert('Error: ' + status + ' (' + error + ')\n\nBody: ' + xhr.responseText);
             }}}});
       }});
-   </script>;
+   </script>
+);
 
 (:~
  : The overall page function.
@@ -42,4 +45,4 @@ declare function local:page()
    </wrapper>/*
 };
 
-v:console-page('../../', 'test', 'Profiler test - Display stacktrace', local:page#0, $script)
+v:console-page('../../', 'test', 'Profiler test - Display stacktrace', local:page#0, $scripts)

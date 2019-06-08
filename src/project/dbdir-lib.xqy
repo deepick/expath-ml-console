@@ -20,9 +20,15 @@ declare function this:title($proj as element(mlc:project))
 declare function this:info($proj as element(mlc:project))
    as item()*
 {
-   v:db-link('db/' || $proj/mlc:db, $proj/mlc:db),
-   ' - ',
-   v:dir-link('db/' || $proj/mlc:db || '/', $proj/mlc:root)
+   let $db := 'db/' || $proj/mlc:db
+   return (
+      v:db-link($db, $proj/mlc:db),
+      ' - ',
+      if ( xs:string($proj/mlc:root) ) then
+         v:dir-link($db || '/', $proj/mlc:root)
+      else
+         v:component-link($db || '/roots', '[roots]', 'dir')
+   )
 };
 
 declare function this:db($proj as element(mlc:project))

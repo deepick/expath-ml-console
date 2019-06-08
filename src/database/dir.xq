@@ -171,21 +171,8 @@ return
                })
          })
       },
-      (b:create-doc-javascript(),
-       <lib>marked</lib>,
-       <script type="text/javascript">
-          var renderer = new marked.Renderer();
-          renderer.image = function(href, title, text) {{
-             return '<img src="bin?uri={ $uri }' + href + '"></img>';
-          }};
-          marked.setOptions({{
-             highlight: function (code) {{
-                return hljs.highlightAuto(code).value;
-             }},
-             renderer: renderer
-          }});
-          $('.md-content').each(function() {{
-             var elem = $(this);
-             elem.html(marked(elem.text()));
-          }});
+      (<lib>emlc.browser</lib>,
+       <lib>emlc.markdown</lib>,
+       <script>
+          emlc.renderMarkdown('./', '{ $uri }');
        </script>))

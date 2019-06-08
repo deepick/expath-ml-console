@@ -1,13 +1,12 @@
-xquery version "3.0";
+xquery version "3.1";
 
 module namespace dbc = "http://expath.org/ns/ml/console/database/config";
 
 import module namespace a = "http://expath.org/ns/ml/console/admin" at "../lib/admin.xqy";
 import module namespace t = "http://expath.org/ns/ml/console/tools" at "../lib/tools.xqy";
 
-declare namespace c = "http://expath.org/ns/ml/console";
-
-declare variable $console-ns := 'http://expath.org/ns/ml/console';
+declare namespace c    = "http://expath.org/ns/ml/console";
+declare namespace xdmp = "http://marklogic.com/xdmp";
 
 (:~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  : Database config access
@@ -93,6 +92,10 @@ declare variable $dbc:default-config :=
       </uri-schemes>
       <triple-prefixes>
          <decl>
+            <prefix>_</prefix>
+            <uri>http://marklogic.com/semantics/blank/</uri>
+         </decl>
+         <decl>
             <prefix>dc</prefix>
             <uri>http://purl.org/dc/terms/</uri>
          </decl>
@@ -154,7 +157,7 @@ declare function dbc:config-component($db as item()?, $name as xs:QName)
       dbc:config-component-1(
          $name,
          ( $db ! t:query(., function() { fn:doc($dbc:config-doc)/* }),
-           fn:doc(dbc:config-system-doc($db))/*,
+           $db ! t:database-name(.) ! fn:doc(dbc:config-system-doc(.))/*,
            fn:doc($dbc:defaults-doc)/*,
            $dbc:default-config ))
    }/*
@@ -196,7 +199,7 @@ declare function dbc:config-component-1($name as xs:QName, $docs as element(c:co
 declare function dbc:config-triple-prefixes($db as item()?)
    as element(c:decl)*
 {
-   dbc:config-component($db, fn:QName($console-ns, 'triple-prefixes'))/*
+   dbc:config-component($db, t:qname('triple-prefixes'))/*
 };
 
 (:~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -206,7 +209,7 @@ declare function dbc:config-triple-prefixes($db as item()?)
 declare function dbc:config-uri-schemes($db as item()?)
    as element(c:scheme)*
 {
-   dbc:config-component($db, fn:QName($console-ns, 'uri-schemes'))/*
+   dbc:config-component($db, t:qname('uri-schemes'))/*
 };
 
 declare function dbc:resolve($uri as xs:string, $prefix as xs:string?, $schemes as element(c:scheme)*) as xs:string
@@ -234,5 +237,5 @@ declare function dbc:is-absolute($uri as xs:string, $schemes as element(c:scheme
 declare function dbc:config-default-rulesets($db as item()?)
    as element(c:ruleset)*
 {
-   dbc:config-component($db, fn:QName($console-ns, 'default-rulesets'))/*
+   dbc:config-component($db, t:qname('default-rulesets'))/*
 };

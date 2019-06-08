@@ -2,13 +2,35 @@ xquery version "3.0";
 
 module namespace t = "http://expath.org/ns/ml/console/tools";
 
+declare namespace a     = "http://expath.org/ns/ml/console/admin";
 declare namespace err   = "http://www.w3.org/2005/xqt-errors";
 declare namespace mlerr = "http://marklogic.com/xdmp/error";
 declare namespace xdmp  = "http://marklogic.com/xdmp";
 
+declare variable $t:console-ns := 'http://expath.org/ns/ml/console';
+
 (:~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  : Work on different databases
  :)
+
+declare function t:database-exists($db as item()) as xs:unsignedLong?
+{
+   let $id := ($db[. instance of element(a:database)]/@id, $db[. castable as xs:unsignedLong])
+   return
+      if ( fn:exists($id) ) then
+         t:catch-ml('XDMP-NODB', function() {
+            let $num := xs:unsignedLong($id)
+            let $_   := xdmp:database-name($num)
+            return
+               $num
+         })
+      else if ( $db instance of xs:string ) then
+         t:catch-ml('XDMP-NOSUCHDB', function() {
+            xdmp:database($db)
+         })
+      else
+         t:error('wrong-param', '$db neither a:database, unsigned long nor string: ' || $db)
+};
 
 (:~
  : Return a database ID.
@@ -20,13 +42,72 @@ declare namespace xdmp  = "http://marklogic.com/xdmp";
  :)
 declare function t:database-id($db as item()) as xs:unsignedLong?
 {
-   if ( $db instance of element() and fn:exists($db/@id) ) then
+   if ( $db instance of element(a:database) ) then
       xs:unsignedLong($db/@id)
    else if ( $db castable as xs:unsignedLong ) then
       xs:unsignedLong($db)
    else
       t:catch-ml('XDMP-NOSUCHDB', function() {
          xdmp:database($db)
+      })
+};
+
+(:~
+ : Return the name of a database.
+ :
+ : If `$db` is an xs:unsignedLong, it is the ID of a database, and its name is
+ : returned (if no such database, the empty sequence is returned).  If it is an
+ : a:database element, its `@name` is returned.  If it is neither, it is returned
+ : as a string.
+ :)
+declare function t:database-name($db as item()) as xs:string?
+{
+   if ( $db instance of element(a:database) ) then
+      $db/a:name
+   else if ( $db castable as xs:unsignedLong ) then
+      t:catch-ml('XDMP-NODB', function() {
+         xdmp:database-name(xs:unsignedLong($db))
+      })
+   else
+      $db
+};
+
+declare function t:appserver-exists($as as item()) as xs:unsignedLong?
+{
+   let $id := ($as[. instance of element(a:appserver)]/@id, $as[. castable as xs:unsignedLong])
+   return
+      if ( fn:exists($id) ) then
+         t:catch-ml('XDMP-NOSERVER', function() {
+            let $num := xs:unsignedLong($id)
+            let $_   := xdmp:server-name($num)
+            return
+               $num
+         })
+      else if ( $as instance of xs:string ) then
+         t:catch-ml('XDMP-NOSUCHSERVER', function() {
+            xdmp:server($as)
+         })
+      else
+         t:error('wrong-param', '$as neither a:appserver, unsigned long nor string: ' || $as)
+};
+
+(:~
+ : Return an app server ID.
+ :
+ : If `$as` is an xs:unsignedLong, it is returned as is.  If it is an a:appserver
+ : element, its `@id` is returned.  If it is neither, it then must be the name
+ : of an app server, which is then resolved to an ID (if such an app server does
+ : not exist, the empty sequence is returned).
+ :)
+declare function t:appserver-id($as as item()) as xs:unsignedLong?
+{
+   if ( $as instance of element(a:appserver) ) then
+      xs:unsignedLong($as/@id)
+   else if ( $as castable as xs:unsignedLong ) then
+      xs:unsignedLong($as)
+   else
+      t:catch-ml('XDMP-NOSUCHSERVER', function() {
+         xdmp:server($as)
       })
 };
 
@@ -64,6 +145,15 @@ declare function t:update(
 (:~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  : Simple tools
  :)
+
+(:~
+ : Return a QName in the Console namespace.  $name is the local name.
+ :)
+declare function t:qname($name as xs:string)
+   as xs:QName
+{
+   fn:QName($t:console-ns, 'c:' || $name)
+};
 
 (:~
  : Ignore its parameter and always return the empty sequence.
@@ -178,9 +268,7 @@ declare function t:catch-ml($codes as xs:string+, $fun as function() as item()*)
 declare function t:error($code as xs:string, $msg as xs:string)
    as empty-sequence()
 {
-   fn:error(
-      fn:QName('http://expath.org/ns/ml/console', 'c:' || $code),
-      $msg)
+   fn:error(t:qname($code), $msg)
 };
 
 (:~
@@ -189,10 +277,7 @@ declare function t:error($code as xs:string, $msg as xs:string)
 declare function t:error($code as xs:string, $msg as xs:string, $info as item()*)
    as empty-sequence()
 {
-   fn:error(
-      fn:QName('http://expath.org/ns/ml/console', 'c:' || $code),
-      $msg,
-      $info)
+   fn:error(t:qname($code), $msg, $info)
 };
 
 (:~
@@ -306,6 +391,15 @@ declare function t:mandatory-field-content-type($name as xs:string)
          $f
       else
          t:error('TOOLS001', 'Mandatory field content-type not passed: ' || $name)
+};
+
+(:~
+ : Return all request field names matching the regex.
+ :)
+declare function t:field-names-matching($re as xs:string)
+   as item()*
+{
+   xdmp:get-request-field-names()[fn:matches(., $re)]
 };
 
 (:~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

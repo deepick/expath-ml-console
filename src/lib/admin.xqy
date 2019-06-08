@@ -274,9 +274,9 @@ declare function a:browse-db-files(
 (:~
  : Get a raw file from the filesystem.
  :
- : Return the empty sequence if the file does not exist.
+ : @param $file the absolute path of the file
  :
- : $file the absolute path of the file
+ : @return The empty sequence if the file does not exist.
  :)
 declare function a:get-from-filesystem($file  as xs:string) as xs:string?
 {
@@ -291,9 +291,9 @@ declare function a:get-from-filesystem($file  as xs:string) as xs:string?
 (:~
  : Return a MarkLogic filesystem directory descriptor.
  :
- : Return the empty sequence if the directory does not exist.
+ : @param $dir the absolute path of the directory
  :
- : $dir the absolute path of the directory
+ : @return The empty sequence if the directory does not exist.
  :)
 declare function a:get-directory($dir as xs:string) as element(dir:directory)?
 {
@@ -305,10 +305,10 @@ declare function a:get-directory($dir as xs:string) as element(dir:directory)?
 (:~
  : Get a document from the filesystem.
  :
- : $file the absolute path of the file
- : $parse true if the file is XML and must be parsed
+ : @param $file the absolute path of the file
+ : @param $parse true if the file is XML and must be parsed
  :
- : TODO: Support binary files as well.  Replace $parse by a flag kind of
+ : @todo Support binary files as well.  Replace $parse by a flag kind of
  : parameter.  If 'xml', then xdmp:unquote(...), if 'text' then text{...}, and
  : if 'bin' then binary{...}.
  :)
@@ -639,56 +639,64 @@ declare function a:get-groups()
  : TODO: Representing app servers all the same way is nonsense.  Create 3
  : different functions: for HTTP servers, XDBC servers, and WebDAV servers.
  :)
-declare function a:get-appserver($as as xs:unsignedLong)
-   as element(a:appserver)
+declare function a:get-appserver($as as item())
+   as element(a:appserver)?
 {
-   let $config := admin:get-configuration()
-   let $db     := admin:appserver-get-database($config, $as)
-   let $_root  := admin:appserver-get-root($config, $as)
-   let $root   := if ( fn:ends-with($_root, '/') ) then $_root else $_root || '/'
-   let $mdb    :=
-            try {
-               (: WebDAV ASs do not have a module DB :)
-               (: TODO: How to retrieve the type of a server programmatically? :)
-               (: TODO: Be sure to catch only this error! :)
-               admin:appserver-get-modules-database($config, $as)
-            }
-            catch * {
-               ()
-            }
-   let $pkgs   :=
-            if ( fn:empty($mdb) ) then
-               ()
-            else if ( $mdb eq 0 ) then
-               a:get-from-directory($root, $repo-root || $packages-file-path, fn:true())
-            else
-               a:get-from-database($mdb, $root, $repo-root || $packages-file-path)
-   return
-      <a:appserver id="{ $as }" type="{ admin:appserver-get-type($config, $as) }">
-         <a:name>{ admin:appserver-get-name($config, $as) }</a:name>
-         <a:port>{ admin:appserver-get-port($config, $as) }</a:port>
-         <a:db id="{ $db }">{ admin:database-get-name($config, $db) }</a:db>
-         {
-            if ( fn:empty($mdb) ) then
-               ()
-            else if ( $mdb eq 0 ) then
-               (: TODO: Resolve the path when it is on file system and relative... :)
-               <a:modules-path>{ $root }</a:modules-path>
-            else
-               <a:modules-db id="{ $mdb }">{ admin:database-get-name($config, $mdb) }</a:modules-db>
-         }
-         {
-            if ( fn:empty($pkgs) ) then
-               ()
-            else
-               <a:repo>
-                  <a:root>{ $root }{ $repo-root }</a:root>
-                  <a:root-relative>{ $repo-root }</a:root-relative>
-                  <a:packages-file>{ $root }{ $repo-root }{ $packages-file-path }</a:packages-file>
-               </a:repo>
-         }
-         <a:root>{ $root }</a:root>
-      </a:appserver>
+   if ( $as instance of element(a:database) ) then
+      $as
+   else
+      let $id := t:appserver-id($as)
+      return
+         if ( fn:empty($id) ) then
+            ()
+         else
+            let $config := admin:get-configuration()
+            let $db     := admin:appserver-get-database($config, $id)
+            let $_root  := admin:appserver-get-root($config, $id)
+            let $root   := if ( fn:ends-with($_root, '/') ) then $_root else $_root || '/'
+            let $mdb    :=
+                     try {
+                        (: WebDAV ASs do not have a module DB :)
+                        (: TODO: How to retrieve the type of a server programmatically? :)
+                        (: TODO: Be sure to catch only this error! :)
+                        admin:appserver-get-modules-database($config, $id)
+                     }
+                     catch * {
+                        ()
+                     }
+            let $pkgs   :=
+                     if ( fn:empty($mdb) ) then
+                        ()
+                     else if ( $mdb eq 0 ) then
+                        a:get-from-directory($root, $repo-root || $packages-file-path, fn:true())
+                     else
+                        a:get-from-database($mdb, $root, $repo-root || $packages-file-path)
+            return
+               <a:appserver id="{ $id }" type="{ admin:appserver-get-type($config, $id) }">
+                  <a:name>{ admin:appserver-get-name($config, $id) }</a:name>
+                  <a:port>{ admin:appserver-get-port($config, $id) }</a:port>
+                  <a:db id="{ $db }">{ admin:database-get-name($config, $db) }</a:db>
+                  {
+                     if ( fn:empty($mdb) ) then
+                        ()
+                     else if ( $mdb eq 0 ) then
+                        (: TODO: Resolve the path when it is on file system and relative... :)
+                        <a:modules-path>{ $root }</a:modules-path>
+                     else
+                        <a:modules-db id="{ $mdb }">{ admin:database-get-name($config, $mdb) }</a:modules-db>
+                  }
+                  {
+                     if ( fn:empty($pkgs) ) then
+                        ()
+                     else
+                        <a:repo>
+                           <a:root>{ $root }{ $repo-root }</a:root>
+                           <a:root-relative>{ $repo-root }</a:root-relative>
+                           <a:packages-file>{ $root }{ $repo-root }{ $packages-file-path }</a:packages-file>
+                        </a:repo>
+                  }
+                  <a:root>{ $root }</a:root>
+               </a:appserver>
 };
 
 (:~

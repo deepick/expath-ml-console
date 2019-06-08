@@ -160,6 +160,12 @@
       <dispatch>/database/matching.xq</dispatch>
    </match-path>
 
+   <!-- database api -->
+   <match-path matches="^/api/db/([-_.0-9a-zA-Z]+)/triples$">
+      <add-query-param name="db">$1</add-query-param>
+      <dispatch>/api/db/triples.sjs</dispatch>
+   </match-path>
+
    <!--
        File system.
    -->
@@ -212,11 +218,8 @@
    </match-path>
 
    <!--
-       Browser and loader.
+       Loader.
    -->
-   <match-path matches="^/browser$">
-      <dispatch>/browser/index.xq</dispatch>
-   </match-path>
    <match-path matches="^/loader$">
       <dispatch>/loader/index.xq</dispatch>
    </match-path>
@@ -332,18 +335,6 @@
    <match-path matches="^/tools/axes$">
       <dispatch>/tools/axes.xq</dispatch>
    </match-path>
-   <match-path matches="^/tools/browse-db$">
-      <dispatch>/tools/browse-db.xq</dispatch>
-   </match-path>
-   <match-path matches="^/tools/browse-colls$">
-      <dispatch>/tools/browse-colls.xq</dispatch>
-   </match-path>
-   <match-path matches="^/tools/browse-triples$">
-      <dispatch>/tools/browse-triples.xq</dispatch>
-   </match-path>
-   <match-path matches="^/tools/browse-classes$">
-      <dispatch>/tools/browse-classes.xq</dispatch>
-   </match-path>
    <match-path matches="^/tools/add-coll$">
       <dispatch>/tools/add-coll.xq</dispatch>
    </match-path>
@@ -361,6 +352,11 @@
    </match-path>
    <match-path matches="^/tools/del-meta$">
       <dispatch>/tools/del-meta.xq</dispatch>
+   </match-path>
+
+   <!-- tool api -->
+   <match-path matches="^/api/tool/eval$">
+      <dispatch>/api/tool/eval.sjs</dispatch>
    </match-path>
 
    <!--

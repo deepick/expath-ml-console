@@ -1,6 +1,5 @@
 xquery version "3.0";
 
-import module namespace b   = "http://expath.org/ns/ml/console/browse"          at "../database/browse-lib.xqy";
 import module namespace dbc = "http://expath.org/ns/ml/console/database/config" at "../database/db-config-lib.xqy";
 
 import module namespace a   = "http://expath.org/ns/ml/console/admin"  at "../lib/admin.xqy";
@@ -109,6 +108,43 @@ declare function local:content(
       else if ( $ext = ('xq', 'xql', 'xqm', 'xqy', 'xquery') ) then (
          v:ace-editor(a:get-from-filesystem($uri), 'code', 'xquery', (), (), (), ())
       )
+      else if ( $ext = ('md') ) then (
+         <hr/>,
+         <div class="md-content"> {
+            a:get-from-filesystem($uri)
+         }
+         </div>,
+         <div id="footpane">
+            <div id="footline">
+               <span>▼</span>
+               <span>Result</span>
+               <span>▲</span>
+            </div>
+            <div id="footbody">
+               <pre><code>[no result to display, yet]</code></pre>
+            </div>
+         </div>,
+         <div style="display: none" id="emlc-db-widget-template">
+            <!-- does not bear the "emlc-target-widget" class, must be added when cloning -->
+            <div class="row" style="margin-bottom: 20px; margin-left: 0;"> {
+               let $dbs   := a:get-databases()/a:database
+               let $asses := a:get-appservers()/a:appserver
+               return (
+                  local:db-button('Database', $dbs),
+                  local:as-button('HTTP',   $asses[@type eq 'http']),
+                  local:as-button('XDBC',   $asses[@type eq 'xdbc']),
+                  local:as-button('ODBC',   $asses[@type eq 'odbc']),
+                  local:as-button('WebDAV', $asses[@type eq 'webDAV']),
+                  <div class="col">
+                     <button type="button" class="emlc-target-execute btn btn-outline-secondary float-right">
+                        Execute
+                     </button>
+                  </div>
+               )
+            }
+            </div>
+         </div>
+      )
 (:
       if ( bin:is-json($doc/node()) ) then (
          v:edit-json($doc, $id, $uri, $dir, $root, $sep, $db-root)
@@ -131,6 +167,47 @@ declare function local:content(
       )
 };
 
+declare function local:button(
+   $label  as xs:string,
+   $values as element(a)+
+) as element(div)
+{
+   <div class="emlc-target-selector btn-group" style="margin-right: 15px;" data-label="{ $label }">
+      <button type="button" class="btn btn-outline-secondary dropdown-toggle"
+              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+         { $label }
+      </button>
+      <div class="dropdown-menu" style="min-width: 400pt">
+         { $values }
+      </div>
+   </div>
+};
+
+declare function local:db-button(
+   $label as xs:string,
+   $dbs   as element(a:database)+)
+{
+   local:button(
+      $label,
+      for $db in $dbs
+      order by $db/a:name
+      return
+         v:format-db-widget-db($db))
+};
+
+declare function local:as-button($label as xs:string, $asses as element(a:appserver)*)
+{
+   if ( fn:exists($asses) ) then
+      local:button(
+         $label,
+         for $as in $asses
+         order by $as/a:name
+         return
+            v:format-db-widget-as($as, $label))
+   else
+      ()
+};
+
 let $uri := t:mandatory-field('uri')
 return
    v:console-page(
@@ -140,4 +217,15 @@ return
       function() {
          local:page($uri)
       },
-      b:create-doc-javascript())
+      (<lib>emlc.browser</lib>,
+       (: TODO: These 3 are necessary only in case we actually generate the
+          executable MarkDown snippets.  Or at least if we do have an MD file,
+          which we can detect here.  The emlc.markdown code can then display the
+          entire footpane only if it does generate such snippets. :)
+       <lib>emlc.footpane</lib>,
+       <lib>emlc.markdown</lib>,
+       <lib>emlc.target</lib>,
+       (: /todo :)
+       <script>
+          emlc.renderMarkdown('./', '{ $uri }');
+       </script>))
